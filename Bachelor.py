@@ -8,24 +8,54 @@ f.close()
 
 print(len(words))
 
-#Fill a board with with empty lists
+
 def createBoard(x, y):
+    '''
+    returns a list of lists with size x*y
+
+            Parameters:
+                    x (int): A whole number
+                    y (int): Another whole number
+
+            Returns:
+                    binary_sum (list(list(0))): List of lists with size x*y
+    '''
     board = []
     row = []
-    for e in range(0, y):
-        row += [0]
     for e in range(0, x):
+        row += [0]
+    for e in range(0, y):
         board += copy.deepcopy([row])
     return board
+
     
-#Takes a list of letters and returns a simple entropy from that
 def SimpleEntropy(letterList):
+    '''
+    Calculates a linear entropy by dividing the length of the input list
+        with the amount of letters in the alphabet
+
+            Parameters:
+                    letterList (list(T)): A list of elements
+
+            Returns:
+                    entropy (int): Int of the length of the list divided by the length of the alphabet
+    '''
     if len(letterList) <= 1:
         return 0
-    return (len(letterList)-1)/25
+    entropy = (len(letterList)-1)/25
+    return entropy
 
-#calculates the frequency of how used a letter is present in a list of words
+
 def Weights(words):
+    '''
+    Calculates a weighted entropy lookup dictionary where the sum of all the letters are approximetly 1
+
+            Parameters:
+                    words (list(str)): A list of words
+
+            Returns:
+                    Weights (dict(char,float)): A dictionary with charaters as lookup and the corresponding entropy as the value
+    '''
     Weights = {'a':0,'b':0,'c':0,'d':0,'e':0,'f':0,'g':0,'h':0,'i':0,'j':0,'k':0,'l':0,'m':0,'n':0,'o':0,'p':0,'q':0,'r':0,'s':0,'t':0,'u':0,'v':0,'w':0,'x':0,'y':0,'z':0}
     letterCount = 0
     for word in words:
@@ -37,8 +67,18 @@ def Weights(words):
         Weights[letter] /= letterCount
     return Weights
 
-#Takes a list of letters and returns a simple entropy from that
+
 def WeightedEntropy(letterList, weights):
+    '''
+    Calculates the entropy of a given list of charaters with a gien weighted entropy dictionary
+
+            Parameters:
+                    letterList (list(char)): A list of charaters
+                    weights (dict(char,float)): A dictionary with charaters as lookup and the corresponding entropy as the value
+
+            Returns:
+                    entropy (int): The sum of entropys from the lookup dictionary corresponding with the letterList
+    '''
     entropy = 0
     for letter in letterList:
         entropy+=weights[letter]
