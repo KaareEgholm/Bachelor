@@ -8,6 +8,9 @@ f.close()
 
 print(len(words))
 
+#startingBlanks = [[1,3],[2,3],[4,1]]
+startingBlanks = [[1,1],[1,3],[3,1],[3,3]]
+minimumWordsToValidate = 2
 
 def createBoard(x, y):
     '''
@@ -28,7 +31,6 @@ def createBoard(x, y):
         board += copy.deepcopy([row])
     return board
 
-    
 def SimpleEntropy(letterList):
     '''
     Calculates a linear entropy by dividing the length of the input list
@@ -57,7 +59,9 @@ def Weights(words, alphabet):
             Returns:
                     Weights (dict(char,float)): A dictionary with charaters as lookup and the corresponding entropy as the value
     '''
-    Weights = {'a':0,'b':0,'c':0,'d':0,'e':0,'f':0,'g':0,'h':0,'i':0,'j':0,'k':0,'l':0,'m':0,'n':0,'o':0,'p':0,'q':0,'r':0,'s':0,'t':0,'u':0,'v':0,'w':0,'x':0,'y':0,'z':0}
+    Weights = {}
+    for letter in alphabet:
+        Weights[letter] = 0
     letterCount = 0
     for word in words:
         for letter in word:
@@ -80,6 +84,8 @@ def WeightedEntropy(letterList, weights):
             Returns:
                     entropy (int): The sum of entropys from the lookup dictionary corresponding with the letterList
     '''
+    if len(letterList) <= 1:
+        return 0
     entropy = 0
     for letter in letterList:
         entropy+=weights[letter]
@@ -99,7 +105,8 @@ def Fillboard(board, alphabet):
     for e in range(0,len(board)):
         for g in range(0,len(board[e])):
             board[e][g]= copy.deepcopy(alphabet)
-    board[2][2] = []
+    for blank in startingBlanks:
+        board[blank[0]][blank[1]] = []
     return board
 
 def IsCellFilled(x, y, board):
@@ -120,7 +127,6 @@ def IsCellFilled(x, y, board):
         return True
     else:
         return False
-
 
 
 def CreatewordLengthLookupTable(boardWidth, boardHeight, board):
@@ -178,9 +184,48 @@ def PropagationFinished(markedBoard):
             return False
     return True
 
+def FindChosenWords(board, wordLengthLookupTable):
+    chosenWords = []
+    plainChosenWords = []
+    for row in range(0,len(board)):
+        for col in range(0,len(board[row])):
+            if wordLengthLookupTable[row][col][0] >= minimumWordsToValidate:
+                word = ""
+                valid = True
+                for i in range(0,wordLengthLookupTable[row][col][0]):
+                    if len(board[row+i][col]) == 1:
+                        word += board[row+i][col][0]
+                    else:
+                        valid = False
+                if valid and word in words and word not in plainChosenWords:
+                    chosenWords.append([word,row,col,0])
+                    plainChosenWords.append(word)
+            if wordLengthLookupTable[row][col][1] >= minimumWordsToValidate:
+                word = ""
+                valid = True
+                for i in range(0,wordLengthLookupTable[row][col][1]):
+                    if len(board[row][col+i]) == 1:
+                        word += board[row][col+i][0]
+                    else:
+                        valid = False
+                if valid and word in words and word not in plainChosenWords:
+                    chosenWords.append([word,row,col,1])
+                    plainChosenWords.append(word)
+    return chosenWords
 
+def IsWordAlreadyChosen(x,y,xMultiplier,yMultiplier,chosenWords):
+    for chosenWord in chosenWords:
+        if x == chosenWord[2] and y == chosenWord[1]:
+            if xMultiplier == 1 and chosenWord[3] == 1:
+                return True
+            if yMultiplier == 1 and chosenWord[3] == 0:
+                return True
+    return False
 
-def FindValidLetters(board, x, y, yLength, yoffset, xLength, xoffset):
+def column(matrix, i):
+    return [row[i] for row in matrix]
+
+def FindValidLetters(board, x, y, yLength, yoffset, xLength, xoffset, chosenWords):
     '''
     Creates a list of lists with the valid letters of a word
 
@@ -211,15 +256,20 @@ def FindValidLetters(board, x, y, yLength, yoffset, xLength, xoffset):
     validLetters = []
     for _ in range(0,wordLength):
         validLetters+=[[]]
+    if wordLength < minimumWordsToValidate or IsWordAlreadyChosen(x-xoffset,y-yoffset,xMultiplier,yMultiplier,chosenWords):
+        for i in range(0,wordLength):
+            validLetters[i] = board[yMultiplier*(i-yoffset)+y][xMultiplier*(i-xoffset)+x]
+        return validLetters
+
     for word in words:
-        if (len(word) == wordLength):
+        if len(word) == wordLength and (not word in column(chosenWords,0)):
             counter = 0
             valid = True
             for letter in word:
                 if (letter not in board[yMultiplier*(counter-yoffset)+y][xMultiplier*(counter-xoffset)+x]):
                     valid = False
                 counter+=1
-            if (valid):
+            if valid:
                 for letterIndex in range(0,len(word)):
                     if word[letterIndex] not in validLetters[letterIndex]:
                         validLetters[letterIndex] += copy.deepcopy([word[letterIndex]])
@@ -230,6 +280,9 @@ def Propagate(board, markedBoard, wordLengthLookupTable):
         for e in range(0,len(markedBoard)):
             for g in range(0,len(markedBoard[e])):
                 if (markedBoard[e][g] == 0):
+                    chosenWords = FindChosenWords(board, wordLengthLookupTable)
+                    #Unmark the cell
+                    markedBoard[e][g] = 1
                     #Vertical propagation
                     #Check if the word begins on the cell and if it doesn't then offset until the beginning of the word is found
                     yoffset = 0
@@ -240,7 +293,7 @@ def Propagate(board, markedBoard, wordLengthLookupTable):
                     #Redundent check
                     if (yLength != 0):
                         #Creates a list to store the valid letters for the selected word
-                        validLetters = FindValidLetters(board, g, e, yLength, yoffset, 0, 0)
+                        validLetters = FindValidLetters(board, g, e, yLength, yoffset, 0, 0, chosenWords)
                         for i in range(0,len(validLetters)):
                             if sorted(validLetters[i]) != board[e+i-yoffset][g]:
                                 markedBoard[e+i-yoffset][g] = 0
@@ -256,26 +309,31 @@ def Propagate(board, markedBoard, wordLengthLookupTable):
                     #Redundent check
                     if (xLength != 0):
                         #Creates a list to store the valid letters for the selected word
-                        validLetters = FindValidLetters(board, g, e, 0, 0, xLength, xoffset)
+                        validLetters = FindValidLetters(board, g, e, 0, 0, xLength, xoffset, [])
                         #Replace letters in board with valid letters and mark the changed let
                         for i in range(0,len(validLetters)):
                             #Mark cell if letters are changed
                             if sorted(validLetters[i]) != board[e][g+i-xoffset]:
                                 markedBoard[e][g+i-xoffset] = 0
                             board[e][g+i-xoffset] = copy.deepcopy(sorted(validLetters[i]))
-                    #Unmark the cell
-                    markedBoard[e][g] = 1
     return board
 
-def FindLowestEntropy(board):
+def FindLowestEntropy(board, weights):
     bestCell = [0,0]
     lowestEntropy = 2
     for row in range(0,len(board)):
         for col in range(0,len(board[row])):
-            if SimpleEntropy(board[row][col]) > 0 and SimpleEntropy(board[row][col]) < lowestEntropy:
-                lowestEntropy = SimpleEntropy(board[row][col])
+            if WeightedEntropy(board[row][col], weights) > 0 and WeightedEntropy(board[row][col], weights) < lowestEntropy:
+                lowestEntropy = WeightedEntropy(board[row][col], weights)
                 bestCell = [row, col]
     return bestCell
+
+def IsBoardValid(board, startingBlanks):
+    for row in range(0,len(board)):
+        for col in range(0,len(board[row])):
+            if board[row][col] == [] and [row,col] not in startingBlanks:
+                return False
+    return True 
 
 def Run():
     alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
@@ -285,27 +343,52 @@ def Run():
     board = Fillboard(board, alphabet)
     wordLengthLookupTable = CreatewordLengthLookupTable(boardHeight, boardWidth, board)
 
+    weights = Weights(words, alphabet)
+
+    savedBoards = []
+    boardChoises = []
+    boardSaveIndex = -1
+
     while True:
         markedBoard = createBoard(boardHeight,boardWidth)
         board = Propagate(board, markedBoard, wordLengthLookupTable)
+        print(board)
+        #Saves previous boards for backtracking
+        boardSaveIndex += 1
+        savedBoards.append(copy.deepcopy(board))
 
-        lowestEntropy = FindLowestEntropy(board)
-        if SimpleEntropy(board[lowestEntropy[0]][lowestEntropy[1]]) == 0:
-            break
+        lowestEntropy = FindLowestEntropy(board, weights)
+        if WeightedEntropy(board[lowestEntropy[0]][lowestEntropy[1]],weights) == 0:
+            #Propagate one last time to check if the crossword is valid
+            markedBoard = createBoard(boardHeight,boardWidth)
+            board = Propagate(board, markedBoard, wordLengthLookupTable)
+            
+            if board[0][0] != []:
+                break
+
+            while not IsBoardValid(board,startingBlanks) and boardSaveIndex != 0:
+                savedBoards.pop(boardSaveIndex)
+                boardSaveIndex -= 1
+                board = copy.deepcopy(savedBoards[boardSaveIndex])
+                lastBoardChoise = boardChoises.pop(boardSaveIndex)
+                board[lastBoardChoise[0]][lastBoardChoise[1]].remove(lastBoardChoise[2])
+                savedBoards[boardSaveIndex] = copy.deepcopy(board)
+            
+            if not IsBoardValid(board,startingBlanks):
+                break
+            lowestEntropy = FindLowestEntropy(board, weights)
         c = random.choice(board[lowestEntropy[0]][lowestEntropy[1]])
         board[lowestEntropy[0]][lowestEntropy[1]] = [c]
         markedBoard[lowestEntropy[0]][lowestEntropy[1]] = 0
-    
-    #Propagate one last time to check if the crossword is valid
-    markedBoard = createBoard(boardHeight,boardWidth)
-    board = Propagate(board, markedBoard, wordLengthLookupTable)
+        boardChoises.append([lowestEntropy[0],lowestEntropy[1],c])
+
     return board
 
 
 crossword = Run()
 c = 0
-while (crossword[0][0] == []):
-    crossword = Run()
+while (not IsBoardValid(crossword, startingBlanks)):
     c += 1
     print(c)
+    crossword = Run()
 print(crossword)
