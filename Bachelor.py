@@ -3,40 +3,45 @@ import copy
 import random
 import math
 import multiprocessing
+import time
 
 f = open("words5000.txt", "r")
 words = f.read().split("\n")
 f.close()
 
-print(len(words))
-
 #5x5
-#startingBlanks = [[1,3],[2,3],[4,1]]
+startingBlanks = [[1,3],[2,3],[4,1]]
 #10x10
-#startingBlanks = [[2,3],[4,0],[4,1],[4,2],[6,3]]
-#startingBlanks = [[0,4],[0,8],[0,9],[1,4],[1,8],[2,3],[2,7],[3,4],[3,5],[4,0],[4,1],[4,2],[4,8],[5,4],[5,9],[6,3],[6,4],[6,5],[6,6],[7,4],[7,9],[8,4],[8,5],[8,9],[9,4],[9,5]]
-#startingBlanks = [[0,6],[1,1],[1,2],[1,9],[2,6],[3,1],[3,7],[3,9],[4,3],[4,4],[4,5],[5,4],[5,5],[5,6],[6,0],[6,2],[6,8],[7,4],[8,0],[8,7],[8,8],[9,4]]
-#startingBlanks = [[0,1],[0,6],[1,3],[2,5],[2,7],[3,2],[3,9],[4,6],[5,0],[5,4],[5,8],[6,2],[7,4],[7,7],[7,9],[8,2],[9,6]]
-startingBlanks = [[0,0],[0,2],[0,4],[0,9],[1,6],[1,8],[2,0],[2,2],[2,4],[3,6],[3,8],[4,0],[4,2],[5,7],[5,9],[6,1],[6,3],[6,4],[7,5],[7,7],[7,9],[8,1],[8,3],[9,0],[9,5],[9,7],[9,9]]
+#startingBlanks = [[0,0],[0,2],[0,4],[0,9],[1,6],[1,8],[2,0],[2,2],[2,4],[3,6],[3,8],[4,0],[4,2],[5,7],[5,9],[6,1],[6,3],[6,4],[7,5],[7,7],[7,9],[8,1],[8,3],[9,0],[9,5],[9,7],[9,9]]
 #15x15
 #startingBlanks = [[0,5],[0,9],[0,10],[1,5],[1,9],[2,5],[2,9],[3,7],[4,0],[4,1],[4,2],[4,6],[4,11],[4,12],[4,13],[4,14],[5,3],[5,8],[6,4],[6,9],[7,4],[7,10],[8,5],[8,10],[9,6],[9,11],[10,0],[10,1],[10,2],[10,3],[10,8],[10,12],[10,13],[10,14],[11,7],[12,5],[12,9],[13,5],[13,9],[14,4],[14,5],[14,9]]
-
-startingBlanks = []
-for i in range(0,190):
-    while True:
-        x = random.randrange(0,20)
-        y = random.randrange(0,20)
-        if [x,y] not in startingBlanks:
-            startingBlanks.append([x,y])
-            break
-
 
 minimumWordsToValidate = 2
 
 def letterToWordIndex(letter, letterPosition, wordLength):
+    '''
+    Return the index to the lookup table
+
+            Parameters:
+                    letter (char): A single letter
+                    letterPosition (int): The position of the letter in the word where 0 is the first position
+                    wordLength (int): The length of the word that the letter is from
+
+            Returns:
+                    (string): A string with the length of the original word where all letters are '_' except the input letter
+    '''
     return '_'*letterPosition+letter+('_'*(wordLength-letterPosition-1))
 
 def createWordLookupTable(wordList):
+    '''
+    Return a dictionary to find all words with a specific length and a letter at a specific position
+
+            Parameters:
+                    wordList (list(string)): A list of words
+
+            Returns:
+                    wordDictionary (dict of str: list(string)): A dictionary with letter indexes as keys and list of corresponds words as values
+    '''
     wordDictionary = {}
     for word in wordList:
         for i in range(0,len(word)):
@@ -49,10 +54,29 @@ def createWordLookupTable(wordList):
 wordLookupTable = createWordLookupTable(words)
 
 def intersection(lst1, lst2):
+    '''
+    Return the intersection of two lists
+
+            Parameters:
+                    lst1 (list(string)): A list of words
+                    lst2 (list(string)): A list of words
+
+            Returns:
+                    lst3 (list(string)): The intersection of lst1 and lst 2
+    '''
     lst3 = [value for value in lst1 if value in lst2]
     return lst3
 
 def findWordInLookupTable(word):
+    '''
+    Return all possible words that can be formed from an incomplete word
+
+            Parameters:
+                    word (string): A incomplete word where unknown letters are filled with a space
+
+            Returns:
+                    validWordIntersection (list(string)): A list of words that can be formed from the incomplete word
+    '''
     validWordList = []
     for letterIndex in range(0, len(word)):
         if word[letterIndex] != " ":
@@ -241,6 +265,17 @@ def PropagationFinished(markedBoard):
     return True
 
 def FindChosenWords(board, wordLengthLookupTable):
+    '''
+    Returns complete word in the board
+
+            Parameters:
+                    board (list(list(list(char)))): A list of lists corresponding to corodinates with a list of available charaters inside
+                    wordLengthLookupTable (list(list(list(int,int)))): A list of lists corresponding to matrix where each element is a list with two ints 
+                                                                            corresponding to a corrdinate pair
+
+            Returns:
+                    chosenWords (list(list(string,int,int,int))): Returns all complete words on the board with their corrdinates and read direction
+    '''
     chosenWords = []
     plainChosenWords = []
     for row in range(0,len(board)):
@@ -260,15 +295,39 @@ def FindChosenWords(board, wordLengthLookupTable):
     return chosenWords
 
 def IsWordAlreadyChosen(x,y,horizontal,vertical,chosenWords):
+    '''
+    Returns a bool corresponding
+
+            Parameters:
+                    x (int): The horizontal position of the word that is being checked
+                    y (int): The vertical position of the word that is being checked
+                    horizontal (bool)): True if the word is horizontal
+                    vertical (bool): True if the word is vertical
+                    chosenWords (list(list(string,int,int,int))): A list of the words that have already been chosen with the word, x position, y position 
+                                                                    and direction. Where the third int indicate a vertical word if 0 and a horizontal word in case of a 1.
+
+            Returns:
+                    (bool): Return a bool representing if the word is found at the coordinate
+    '''
     for chosenWord in chosenWords:
         if x == chosenWord[2] and y == chosenWord[1]:
-            if horizontal == 1 and chosenWord[3] == 1:
+            if horizontal == True and chosenWord[3] == 1:
                 return True
-            if vertical == 1 and chosenWord[3] == 0:
+            if vertical == True and chosenWord[3] == 0:
                 return True
     return False
 
-def column(matrix, i):
+def Column(matrix, i):
+    '''
+    Returns a coloum of a matrix
+
+            Parameters:
+                    matrix (list(list(type))): A list of lists containing any type
+                    i (int): The index of the coloum
+
+            Returns:
+                    (list(type)): Returns a list with the values from the coloum of the matrix
+    '''
     return [row[i] for row in matrix]
 
 def FindValidLetters(board, x, y, yLength, yoffset, xLength, xoffset, chosenWords):
@@ -322,7 +381,7 @@ def FindValidLetters(board, x, y, yLength, yoffset, xLength, xoffset, chosenWord
         lookupList = words
 
     for word in lookupList:
-        if len(word) == wordLength and (not word in column(chosenWords,0)):
+        if len(word) == wordLength and (not word in Column(chosenWords,0)):
             counter = 0
             valid = True
             for letter in word:
@@ -336,6 +395,18 @@ def FindValidLetters(board, x, y, yLength, yoffset, xLength, xoffset, chosenWord
     return validLetters
 
 def Propagate(board, markedBoard, wordLengthLookupTable):
+    '''
+    Removes options from a board which are not part of a valid solution
+
+            Parameters:
+                    board (list(list(list(char)))): A list of lists corresponding to corodinates with a list of available charaters inside
+                    markedBoard (list(list(int))): A list of lists containing 0 if a cell should be propagated
+                    wordLengthLookupTable (list(list(list(int,int)))): A list of lists corresponding to matrix where each element is a list with two ints 
+                                                                            corresponding to a corrdinate pair
+
+            Returns:
+                    board (list(list(list(char)))): A list of lists corresponding to corodinates with a list of available charaters inside
+    '''
     while not PropagationFinished(markedBoard):
         for e in range(0,len(markedBoard)):
             for g in range(0,len(markedBoard[e])):
@@ -378,6 +449,16 @@ def Propagate(board, markedBoard, wordLengthLookupTable):
     return board
 
 def FindLowestEntropy(board, weights):
+    '''
+    Finds the celll with the lowest entropy
+
+            Parameters:
+                    board (list(list(list(char)))): A list of lists corresponding to corodinates with a list of available charaters inside
+                    weights (dict(char,float)): A dictionary with charaters as lookup and the corresponding entropy as the value
+
+            Returns:
+                    (list(int,int)): Returns a list with the corrdinate to the cell with the lowest entropy
+    '''
     bestCell = []
     lowestEntropy = 2
     for row in range(0,len(board)):
@@ -387,10 +468,20 @@ def FindLowestEntropy(board, weights):
                 bestCell.append([row, col])
     if bestCell == []:
         return [0,0]
-    return bestCell
+    return random.choice(bestCell)
 
 
 def FindLowestEntropyNeighbour(board, weights):
+    '''
+    Finds the celll with the lowest entropy by considering neighbouring cells
+
+            Parameters:
+                    board (list(list(list(char)))): A list of lists corresponding to corodinates with a list of available charaters inside
+                    weights (dict(char,float)): A dictionary with charaters as lookup and the corresponding entropy as the value
+
+            Returns:
+                    (list(int,int)): Returns a list with the corrdinate to the cell with the lowest entropy
+    '''
     bestCell = []
     lowestEntropy = 2
     boardHeight = len(board)
@@ -398,22 +489,32 @@ def FindLowestEntropyNeighbour(board, weights):
     for row in range(0,len(board)):
         for col in range(0,len(board[row])):
             multiplier = 1
-            if row-1 > 0 and WeightedEntropy(board[row-1][col], weights) == 0 and [row-1,col] not in startingBlanks:
-                multiplier *= 10
-            if row+1 < boardHeight and WeightedEntropy(board[row+1][col], weights) == 0 and [row+2,col] not in startingBlanks:
-                multiplier *= 10
-            if col-1 > 0 and WeightedEntropy(board[row][col-1], weights) == 0 and [row,col-1] not in startingBlanks:
-                multiplier *= 10
-            if col+1 < boardWidth and WeightedEntropy(board[row][col+1], weights) == 0 and [row,col+2] not in startingBlanks:
-                multiplier *= 10
-            if WeightedEntropy(board[row][col], weights) > 0 and WeightedEntropy(board[row][col], weights)/(multiplier) <= lowestEntropy:
-                lowestEntropy = WeightedEntropy(board[row][col], weights)/(multiplier)
+            if row-1 > 0 and SimpleEntropy(board[row-1][col], weights) == 0 and [row-1,col] not in startingBlanks:
+                multiplier *= 1000
+            if row+1 < boardHeight and SimpleEntropy(board[row+1][col], weights) == 0 and [row+2,col] not in startingBlanks:
+                multiplier *= 1000
+            if col-1 > 0 and SimpleEntropy(board[row][col-1], weights) == 0 and [row,col-1] not in startingBlanks:
+                multiplier *= 1000
+            if col+1 < boardWidth and SimpleEntropy(board[row][col+1], weights) == 0 and [row,col+2] not in startingBlanks:
+                multiplier *= 1000
+            if SimpleEntropy(board[row][col], weights) > 0 and SimpleEntropy(board[row][col], weights)/(multiplier) <= lowestEntropy:
+                lowestEntropy = SimpleEntropy(board[row][col], weights)/(multiplier)
                 bestCell.append([row, col])
     if bestCell == []:
         return [0,0]
     return random.choice(bestCell)
 
 def IsBoardValid(board, startingBlanks):
+    '''
+    Checks if the board is valid
+
+            Parameters:
+                    board (list(list(list(char)))): A list of lists corresponding to corodinates with a list of available charaters inside
+                    startingBlanks (list(list(int,int))): A list of corrdinates
+
+            Returns:
+                    (bool): Returns a list with the corrdinate to the cell with the lowest entropy
+    '''
     for row in range(0,len(board)):
         for col in range(0,len(board[row])):
             if board[row][col] == [] and [row,col] not in startingBlanks:
@@ -421,7 +522,7 @@ def IsBoardValid(board, startingBlanks):
     return True 
 
 def Run(alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'],
-    boardWidth = 20, boardHeight = 20):
+    boardWidth = 5, boardHeight = 5):
     
     board = createBoard(boardWidth,boardHeight)
     board = Fillboard(board, alphabet)
@@ -438,7 +539,7 @@ def Run(alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o',
         #Saves previous boards for backtracking
         savedBoards.append(copy.deepcopy(board))
 
-        lowestEntropy = FindLowestEntropyNeighbour(board, weights)
+        lowestEntropy = FindLowestEntropy(board, weights)
         if WeightedEntropy(board[lowestEntropy[0]][lowestEntropy[1]],weights) == 0:
             if IsBoardValid(board,startingBlanks):
                 break
@@ -451,7 +552,7 @@ def Run(alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o',
                 markedBoard = createBoard(boardWidth, boardHeight)
                 board = Propagate(board, markedBoard, wordLengthLookupTable)
             
-            lowestEntropy = FindLowestEntropyNeighbour(board, weights)
+            lowestEntropy = FindLowestEntropy(board, weights)
             if not IsBoardValid(board,startingBlanks):
                 break
             elif (WeightedEntropy(board[lowestEntropy[0]][lowestEntropy[1]],weights) == 0):
@@ -461,31 +562,9 @@ def Run(alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o',
         markedBoard[lowestEntropy[0]][lowestEntropy[1]] = 0
         boardChoises.append([lowestEntropy[0],lowestEntropy[1],c])
 
-    print(board)
     return board
 
-if __name__ == '__main__':
-    while True:
-        # Start bar as a process
-        p = multiprocessing.Process(target=Run)
-        p.start()
-
-        # Wait for 10 seconds or until process finishes
-        p.join(60)
-
-        # If thread is still active
-        if p.is_alive():
-            print("running... let's kill it...")
-
-            # Terminate - may not work if process is stuck for good
-            p.kill()
-            # OR Kill - will work for sure, no chance for process to finish nicely however
-            # p.kill()
-
-            p.join()
-
-
-'''
+#Runs the algorithm until a valid crossword is found
 crossword = Run()
 c = 0
 while (not IsBoardValid(crossword, startingBlanks)):
@@ -493,4 +572,3 @@ while (not IsBoardValid(crossword, startingBlanks)):
     print(c)
     crossword = Run()
 print(crossword)
-'''
