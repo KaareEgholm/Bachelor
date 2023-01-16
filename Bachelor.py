@@ -1,9 +1,6 @@
-import numpy as np
 import copy
 import random
 import math
-import multiprocessing
-import time
 
 f = open("words5000.txt", "r")
 words = f.read().split("\n")
@@ -459,16 +456,14 @@ def FindLowestEntropy(board, weights):
             Returns:
                     (list(int,int)): Returns a list with the corrdinate to the cell with the lowest entropy
     '''
-    bestCell = []
+    bestCell = [0,0]
     lowestEntropy = 2
     for row in range(0,len(board)):
         for col in range(0,len(board[row])):
             if WeightedEntropy(board[row][col], weights) > 0 and WeightedEntropy(board[row][col], weights) < lowestEntropy:
                 lowestEntropy = WeightedEntropy(board[row][col], weights)
-                bestCell.append([row, col])
-    if bestCell == []:
-        return [0,0]
-    return random.choice(bestCell)
+                bestCell = [row, col]
+    return bestCell
 
 
 def FindLowestEntropyNeighbour(board, weights):
@@ -482,7 +477,7 @@ def FindLowestEntropyNeighbour(board, weights):
             Returns:
                     (list(int,int)): Returns a list with the corrdinate to the cell with the lowest entropy
     '''
-    bestCell = []
+    bestCell = [0,0]
     lowestEntropy = 2
     boardHeight = len(board)
     boardWidth = len(board[0])
@@ -499,10 +494,8 @@ def FindLowestEntropyNeighbour(board, weights):
                 multiplier *= 1000
             if SimpleEntropy(board[row][col], weights) > 0 and SimpleEntropy(board[row][col], weights)/(multiplier) <= lowestEntropy:
                 lowestEntropy = SimpleEntropy(board[row][col], weights)/(multiplier)
-                bestCell.append([row, col])
-    if bestCell == []:
-        return [0,0]
-    return random.choice(bestCell)
+                bestCell = [row, col]
+    return bestCell
 
 def IsBoardValid(board, startingBlanks):
     '''
@@ -513,7 +506,7 @@ def IsBoardValid(board, startingBlanks):
                     startingBlanks (list(list(int,int))): A list of corrdinates
 
             Returns:
-                    (bool): Returns a list with the corrdinate to the cell with the lowest entropy
+                    (bool): Returns a bool which is True if the board is valid and False if it is not valid
     '''
     for row in range(0,len(board)):
         for col in range(0,len(board[row])):
@@ -523,7 +516,17 @@ def IsBoardValid(board, startingBlanks):
 
 def Run(alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'],
     boardWidth = 5, boardHeight = 5):
-    
+    '''
+    Runs the algorithm
+
+            Parameters:
+                    alphabet (list(char)): List of the charaters in the used alphabet
+                    boardWidth (int): The width of the board
+                    boardHeight (int): The height of the board
+
+            Returns:
+                    board (list(list(list(char)))): A list of lists corresponding to corodinates with a list with one or no charater inside
+    '''
     board = createBoard(boardWidth,boardHeight)
     board = Fillboard(board, alphabet)
     wordLengthLookupTable = CreatewordLengthLookupTable(boardWidth, boardHeight, board)
